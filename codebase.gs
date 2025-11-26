@@ -47,7 +47,7 @@ function findColumnIndex(headers, searchPhrase) {
     }
   }
   
-  return -1; //if not found
+  return -1;
 }
 
 function createColumnMap(headers, mappingConfig) {
@@ -74,7 +74,7 @@ function normalizeField(value, fieldName) {
   // Address normalization
   if (fieldName === 'address') {
     normalized = normalized.toLowerCase()
-      .replace(/\b\w/g, l => l.toUpperCase()) 
+      .replace(/\b\w/g, l => l.toUpperCase()) // Title case
       .replace(/\bSt\b/g, 'Street')
       .replace(/\bAve\b/g, 'Avenue')
       .replace(/\bDr\b/g, 'Drive')
@@ -84,10 +84,10 @@ function normalizeField(value, fieldName) {
   
   // Phone normalization
   if (fieldName === 'phone') {
-    return normalized.replace(/\D/g, ''); 
+    return normalized.replace(/\D/g, ''); // Just digits
   }
   
- 
+  // Names and default - lowercase for comparison
   return normalized.toLowerCase();
 }
 
@@ -96,7 +96,7 @@ function loadSheetData(sheetConfig) {
   const sheet = ss.getSheetByName(sheetConfig.tabName);
   const data = sheet.getDataRange().getValues();
   
-  if (data.length < 2) return []; 
+  if (data.length < 2) return [];
   
   const headers = data[0];
   const columnMap = createColumnMap(headers, sheetConfig.columnMapping);
@@ -104,7 +104,7 @@ function loadSheetData(sheetConfig) {
   
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
-    if (row.every(cell => !cell)) continue; // skip empty rows
+    if (row.every(cell => !cell)) continue;
     
     const record = {
       rowNumber: i + 1,
@@ -205,7 +205,6 @@ function findAllMatches(data1, data2) {
 }
 
 function highlightMatches(matches) {
-
   const toHighlight = {
     program1: { yellow: new Set(), orange: new Set() },
     program2: { yellow: new Set(), orange: new Set() }
@@ -214,14 +213,12 @@ function highlightMatches(matches) {
   for (const match of matches) {
     const color = match.matchInfo.matchType === 'contact' ? 'orange' : 'yellow';
     
-    // Add to program1 highlighting
     if (match.record1.sheetId === CONFIG.sheets.program1.spreadsheetId) {
       toHighlight.program1[color].add(match.record1.rowNumber);
     } else {
       toHighlight.program2[color].add(match.record1.rowNumber);
     }
     
-    // Add to program2 highlighting
     if (match.record2.sheetId === CONFIG.sheets.program2.spreadsheetId) {
       toHighlight.program2[color].add(match.record2.rowNumber);
     } else {
@@ -229,7 +226,6 @@ function highlightMatches(matches) {
     }
   }
   
-  // applying highlights
   applyHighlighting(CONFIG.sheets.program1, toHighlight.program1);
   applyHighlighting(CONFIG.sheets.program2, toHighlight.program2);
 }
@@ -238,13 +234,11 @@ function applyHighlighting(sheetConfig, colorGroups) {
   const ss = SpreadsheetApp.openById(sheetConfig.spreadsheetId);
   const sheet = ss.getSheetByName(sheetConfig.tabName);
   
- 
   for (const row of colorGroups.yellow) {
     sheet.getRange(row, 1, 1, sheet.getLastColumn())
       .setBackground(CONFIG.colors.nameMatch);
   }
   
- 
   for (const row of colorGroups.orange) {
     sheet.getRange(row, 1, 1, sheet.getLastColumn())
       .setBackground(CONFIG.colors.contactMatch);
@@ -252,7 +246,14 @@ function applyHighlighting(sheetConfig, colorGroups) {
 }
 
 function sendNotification(matches) {
-  if (!CONFIG.notifications.enabled || matches.length === 0) return;
+  Logger.log('sendNotification called with ' + matches.length + ' matches');
+  
+  if (!CONFIG.notifications.enabled) {
+    Logger.log('Notifications disabled');
+    return;
+  }
+  
+  if (matches.length === 0) return;
   
   // Check for perfect matches
   const perfectMatches = matches.filter(m => {
@@ -261,7 +262,10 @@ function sendNotification(matches) {
     return Object.keys(data1).every(key => data1[key] === data2[key]);
   });
   
+  Logger.log('Found ' + perfectMatches.length + ' perfect matches');
+  
   if (perfectMatches.length === 0 && CONFIG.notifications.sendOnlyIfMatchesFound) {
+    Logger.log('No perfect matches - not sending email');
     return;
   }
   
@@ -280,6 +284,7 @@ function sendNotification(matches) {
   });
   
   MailApp.sendEmail(recipients, subject, body);
+  Logger.log('Email sent');
 }
 
 function runFullCheck() {
@@ -287,6 +292,8 @@ function runFullCheck() {
   const data2 = loadSheetData(CONFIG.sheets.program2);
   
   const matches = findAllMatches(data1, data2);
+  
+  Logger.log(`Found ${matches.length} matches`);
   
   if (matches.length > 0) {
     highlightMatches(matches);
@@ -301,22 +308,19 @@ function onEdit(e) {
   const sheet = range.getSheet();
   const ssId = sheet.getParent().getId();
   
-
   if (ssId !== CONFIG.sheets.program1.spreadsheetId && 
       ssId !== CONFIG.sheets.program2.spreadsheetId) {
     return;
   }
   
   const rowNumber = range.getRow();
-  if (rowNumber <= 1) return; 
+  if (rowNumber <= 1) return;
   
-
   const editedConfig = ssId === CONFIG.sheets.program1.spreadsheetId ? 
     CONFIG.sheets.program1 : CONFIG.sheets.program2;
   const otherConfig = ssId === CONFIG.sheets.program1.spreadsheetId ? 
     CONFIG.sheets.program2 : CONFIG.sheets.program1;
   
-
   const editedRecord = loadSingleRow(editedConfig, rowNumber);
   const otherData = loadSheetData(otherConfig);
   
