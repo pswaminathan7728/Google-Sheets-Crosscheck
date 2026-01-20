@@ -1,4 +1,3 @@
-// ============ MASTER SIGNAL SCRIPT ============
 
 // Configuration
 const SIGNAL_CONFIG = {
