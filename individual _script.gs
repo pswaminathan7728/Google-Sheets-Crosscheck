@@ -1,5 +1,4 @@
-// ============ MASTER CONTROL SCRIPT ============
-// This script triggers all individual pair scripts
+
 
 // ============ CONFIGURATION ============
 const PAIR_SCRIPTS = [
