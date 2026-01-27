@@ -8,7 +8,7 @@ const SIGNAL_CONFIG = {
 
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu('🔍 Cross-Check Master')
+    .createMenu('Cross-Check Master')
     .addItem('Run All Cross-Checks', 'triggerAllScripts')
     .addItem('Check Signal Status', 'checkSignalStatus')
     .addToUi();
